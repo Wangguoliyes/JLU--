@@ -1,0 +1,818 @@
+#include <iostream>
+#include <vector>
+#include<fstream>
+#include <string>
+
+using namespace std;
+ofstream myOutput("output.txt");
+
+string STR[] = {
+     "IDENFR", "INTCON", "CHARCON", "STRCON", "CONSTTK",
+    "INTTK", "CHARTK", "VOIDTK", "MAINTK", "IFTK", "ELSETK", "DOTK"
+    , "WHILETK", "FORTK", "SCANFTK", "PRINTFTK", "RETURNTK", "PLUS", "MINU", "MULT"
+    , "DIV", "LSS", "LEQ", "GRE", "GEQ", "EQL", "NEQ", "ASSIGN", "SEMICN", "COMMA", "LPARENT",
+    "RPARENT", "LBRACK", "RBRACK", "LBRACE", "RBRACE", "END", "WRONG"
+};
+
+
+
+class Parser {
+private:
+    std::vector<string> tokens;
+    int pos;
+
+public:
+    Parser(const std::vector<string>& inputTokens) : tokens(inputTokens), pos(0) {}
+
+    // 获取下一个 Token
+    string peek() {
+        if (pos < tokens.size()) {
+            //cout << "now is " << pos << "  token is  " << tokens[pos] << endl;
+         
+            return tokens[pos].substr(0, tokens[pos].find(" "));
+
+        }
+        else {
+            return string("END");
+        }
+    }
+    string peek1() {
+        if (pos+1 < tokens.size()) {
+            //cout << "now is " << pos << "  token is  " << tokens[pos] << endl;
+
+            return tokens[pos + 1].substr(0, tokens[pos + 1].find(" "));
+
+        }
+        else {
+            return string("END");
+        }
+    }
+
+    string peek2() {
+        if (pos+2 < tokens.size()) {
+            //cout << "now is " << pos << "  token is  " << tokens[pos] << endl;
+
+            return tokens[pos + 2].substr(0, tokens[pos + 2].find(" "));
+
+        }
+        else {
+            return string("END");
+        }
+    }
+
+    // 消费一个 Token
+    string consume(string expectedType) {
+        string currentToken = peek();
+        if (currentToken == expectedType) {
+            //cout << tokens[pos] << endl;
+            myOutput << tokens[pos] << endl;
+            pos++;
+            return currentToken;
+         
+        }
+        else {
+            return " ";
+        }
+    }
+
+ 
+    //字符串
+    void String() {
+        if (peek() == "STRCON");
+        consume("STRCON");
+        myOutput<< "<字符串>" << endl;
+        //cout << "<字符串>" << endl;
+    }
+    //程序
+    void procedure() {
+
+        if (peek() == "CONSTTK") {
+            constDeclear();
+        }
+        if ((peek() == "INTTK" || peek() == "CHARTK")&& (peek2() != "LPARENT")) {
+   
+            variableDeclear();
+        }
+        while ((peek() == "INTTK" || peek() == "CHARTK" || peek() == "VOIDTK" )&& peek1() != "MAINTK") {
+            if (peek() == "INTTK" || peek() == "CHARTK") {
+                functionDefinationWithReturn();
+            }
+            else {
+                functionDefinationWithoutReturn();
+            }
+        }
+        mainFunction();
+        myOutput << "<程序>" << endl;
+        //cout << "<程序>" << endl;
+    }
+    //常量说明
+    void constDeclear() {
+        consume("CONSTTK");
+        constDefination();
+        consume("SEMICN");
+
+        while (peek() == "CONSTTK") {
+            consume("CONSTTK");
+            constDefination();
+        }
+
+        consume("SEMICN");
+        myOutput << "<常量说明>" << endl;
+        /*cout << "<常量说明>" << endl;*/
+    }
+    //常量定义
+    void constDefination() {
+
+        if (peek() == "INTTK") {
+            consume("INTTK");
+            identifier();
+            consume("ASSIGN");
+            integer();
+            while (peek() == "COMMA") {
+                consume("COMMA");
+                identifier();
+                consume("ASSIGN");
+                integer();
+            }
+        }
+        else if (peek() == "CHARTK") {
+            consume("CHARTK");
+            identifier();
+            consume("ASSIGN");
+            consume("CHARCON");
+
+            while (peek() == "COMMA") {
+                consume("COMMA");
+                identifier();
+                consume("ASSIGN");
+                consume("CHARCON");
+
+            }
+
+        }
+        myOutput << "<常量定义>" << endl;
+
+    }
+
+    //无符号整数
+    void unsignedInteger() {
+        consume("INTCON");
+        myOutput << "<无符号整数>" << endl;
+    }
+    //整数
+    void integer() {
+        if (peek() == "PLUS" || peek() == "MINU") {
+            consume(peek());
+            unsignedInteger();
+        }
+        else {
+            unsignedInteger();
+        }
+        myOutput << "<整数>" << endl;
+    }
+    //标识符
+    void identifier() {
+        consume("IDENFR");
+        //cout << "标识符" << endl;
+    }
+    //声明头部
+    void declearHead() {
+        if (peek() == "INTTK") {
+            consume("INTTK");
+            identifier();
+        }
+        else if (peek() == "CHARTK") {
+            consume("CHARTK");
+            identifier();
+        }
+        myOutput << "<声明头部>" << endl;
+
+    }
+    //变量声明
+    void variableDeclear() {
+        variableDefination();
+        consume("SEMICN");
+        while ((peek() == "INTTK" || peek() == "CHARTK")&&(peek2()!="LPARENT")) {
+            variableDefination();
+            consume("SEMICN");
+        }
+        myOutput << "<变量说明>" << endl;
+    }
+
+    //变量定义
+    void variableDefination() {
+        typeIdentifier();
+        identifier();
+        if (peek() == "LBRACK") {
+            consume("LBRACK");
+            unsignedInteger();
+            consume("RBRACK");
+        }
+        while (peek() == "COMMA") {
+            consume("COMMA");
+
+            identifier();
+            if (peek() == "LBRACK") {
+                consume("LBRACK");
+                unsignedInteger();
+                consume("RBRACK");
+            }
+
+        }
+
+        myOutput << "<变量定义>" << endl;
+    }
+    //类型标识符
+    void typeIdentifier() {
+        if (peek() == "INTTK" || peek() == "CHARTK") {
+            consume(peek());
+        }
+        //cout << "<类型标识符>" << endl;
+    }
+    //有返回值的函数定义
+    void functionDefinationWithReturn() {
+        declearHead();
+        consume("LPARENT");
+        parameterTable();
+        consume("RPARENT");
+        consume("LBRACE");
+        compoundSentence();
+        consume("RBRACE");
+        myOutput << "<有返回值函数定义>" << endl;
+    }
+    //无返回值的函数定义
+    void functionDefinationWithoutReturn() {
+        consume("VOIDTK");
+        identifier();
+        consume("LPARENT");
+        parameterTable();
+        consume("RPARENT");
+        consume("LBRACE");
+        compoundSentence();
+        consume("RBRACE");
+        myOutput << "<无返回值函数定义>" << endl;
+    }
+    //复合语句
+    void compoundSentence() {
+        if (peek() == "CONSTTK") {
+            constDeclear();
+        }
+        if (peek() == "INTTK" || peek() == "CHARTK") {
+            variableDeclear();
+        }
+        sentenceList();
+        myOutput << "<复合语句>" << endl;
+    }
+    //参数表
+    void parameterTable() {
+
+        typeIdentifier();
+        identifier();
+        while (peek() == "COMMA") {
+            consume("COMMA");
+            typeIdentifier();
+            identifier();
+        }
+        myOutput << "<参数表>" << endl;
+    }
+    //主函数
+    void mainFunction() {
+        consume("VOIDTK");
+        consume("MAINTK");
+        consume("LPARENT");
+        consume("RPARENT");
+        consume("LBRACE");
+        compoundSentence();
+        consume("RBRACE");
+        myOutput << "<主函数>" << endl;
+    }
+    //表达式
+    void expression() {
+   
+            while (peek() == "PLUS" || peek() == "MINU") {
+                consume(peek());
+            }
+
+            item();
+
+            while ((peek() == "PLUS" || peek() == "MINU")) {
+                consume(peek());
+                item();
+            }
+
+  
+        myOutput << "<表达式>" << endl;
+    }
+    //项
+    void item() {
+        factor();
+        while ((peek() == "MULT" || peek() == "DIV") && (peek1() != "MULT" && peek1() != "DIV")) {
+            consume(peek());
+            factor();
+        }
+        myOutput << "<项>" << endl;
+    }
+    //因子
+    void factor() {
+        if (peek() == "IDENFR" && peek1() != "LPARENT") {   //标识符 标识符[]
+            identifier();
+            if (peek() == "LBRACK") {
+                consume("LBRACK");
+                expression();
+                consume("RBRACK");
+            }
+        }
+        else if (peek() == "LPARENT") { //表达式
+            consume("LPARENT");
+            expression();
+            consume("RPARENT");
+        }
+        else if (peek() == "INTCON"|| peek() == "PLUS"|| peek() == "MINU") {  //整数
+            integer();
+        }
+        else if (peek() == "CHARCON") { //字符
+            consume("CHARCON");
+        }
+        if (peek() == "IDENFR" && peek1() == "LPARENT") {
+            functionCallWithReturn();
+        }
+        myOutput << "<因子>" << endl;
+    }
+    //语句
+    void sentence() {
+        if (peek() == "IFTK") {         //条件语句
+            conditionSentence();
+        }
+        else if (peek() == "WHILETK"|| peek() == "DOTK"|| peek() == "FORTK") { //循环语句
+            loopSentence();
+        }
+        else if (peek() == "LBRACE") {  //语句列
+            consume("LBRACE");
+            sentenceList();
+            consume("RBRACE");
+        }
+        else if ((peek() == "IDENFR")&&(peek1()=="LPARENT")) {
+            functionCallWithoutReturn();
+            consume("SEMICN");
+        }
+        else if ((peek() == "IDENFR") && (peek1() == "LPARENT")) {
+            functionCallWithReturn();
+            consume("SEMICN");
+        }
+        else if(peek() == "PRINTFTK" ) { //写语句
+         printSentence();
+         consume("SEMICN");
+        }
+        else if (peek() == "SCANFTK" ) { //读语句
+         readSentence();
+         consume("SEMICN");
+        }
+        else if ((peek() == "IDENFR" )&& (peek1() == "ASSIGN")|| (peek() == "IDENFR") && (peek1() == "LBRACK")) { //赋值语句
+            assignSentence();
+            consume("SEMICN");
+        }
+        else if (peek() == "RETURNTK") {    //返回语句
+            returnSentence();
+            consume("SEMICN");
+        }
+        else {
+            consume("SEMICN");
+        }
+       
+        myOutput << "<语句>" << endl;
+    }
+    //赋值语句
+    void assignSentence() {
+        identifier();
+        if (peek() == "LBRACK") {
+            consume("LBRACK");
+            expression();
+            consume("RBRACK");
+        }
+        consume("ASSIGN");
+        expression();
+     
+        myOutput << "<赋值语句>" << endl;
+    }
+    //条件语句
+    void conditionSentence() {
+        consume("IFTK");
+        consume("LPARENT");
+        condition();
+        consume("RPARENT");
+        sentence();
+        if (peek() == "ELSETK") {
+            consume("ELSETK");
+            sentence();
+        }
+        myOutput << "<条件语句>" << endl;
+    }
+    //条件
+    void condition() {
+        expression();
+        if (peek() == "LSS" || peek() == "LEQ" || peek() == "GRE" || peek() == "GEQ" || peek() == "EQL" || peek() == "NEQ") {
+            string operatorToken = consume(peek());
+            expression();
+        }
+        myOutput << "<条件>" << endl;
+    }
+    //循环语句
+    void loopSentence() {//////////////////
+        if (peek() == "WHILETK") {
+            consume("WHILETK");
+            consume("LPARENT");
+            condition();
+            consume("RPARENT");
+            sentence();
+        }
+        else if (peek() == "DOTK") {
+            consume("DOTK");
+            sentence();
+            consume("WHILETK");
+            consume("LPARENT");
+            condition();
+            consume("RPARENT");
+
+        }
+        else if (peek() == "FORTK") {
+            consume("FORTK");
+            consume("LPARENT");
+            identifier();
+            consume("ASSIGN");
+            expression();
+            consume("SEMICN");
+            condition();
+            consume("SEMICN");
+            identifier();
+            consume("ASSIGN");
+            identifier();
+            if (peek() == "PLUS" || peek() == "MINU") {
+                consume(peek());
+            }
+            stepLength();
+            consume("RPARENT");
+            sentence();
+        }
+        myOutput << "<循环语句>" << endl;
+    }
+    //步长
+    void stepLength() {
+        unsignedInteger();
+        myOutput << "<步长>" << endl;
+    }
+    //有返回值函数调用语句
+    void functionCallWithReturn() {
+        identifier();
+        consume("LPARENT");
+
+        valueParameterTable();
+
+        consume("RPARENT");
+        myOutput << "<有返回值函数调用语句>" << endl;
+    }
+    //无返回值函数调用语句
+    void functionCallWithoutReturn() {
+        identifier();
+        consume("LPARENT");
+
+        valueParameterTable();
+
+        consume("RPARENT");
+        myOutput << "<无返回值函数调用语句>" << endl;
+    }
+    //值参数表
+    void valueParameterTable() {
+        if (peek() != "RPARENT") {
+            expression();
+            while (peek() == "COMMA") {
+                consume("COMMA");
+                expression();
+            }
+        }
+        myOutput << "<值参数表>" << endl;
+    }
+    //语句列
+    void sentenceList() {
+        while (peek() != "RBRACE") {
+            sentence();
+        }
+        myOutput << "<语句列>" << endl;
+    }
+    //读语句
+    void readSentence() {
+        consume("SCANFTK");
+        consume("LPARENT");
+        while (peek() != "RPARENT") {
+            identifier();
+            if (peek() == "COMMA") {
+                consume("COMMA");
+            }
+        }
+        consume("RPARENT");
+ 
+        myOutput << "<读语句>" << endl;
+    }
+    //写语句
+    void printSentence() {
+        consume("PRINTFTK");
+        consume("LPARENT");
+
+        if (peek() == "STRCON") {
+            String();
+            if (peek() == "COMMA") {
+                consume("COMMA");
+                expression();
+            }
+        }
+        else {
+            expression();
+        }
+
+
+        consume("RPARENT");
+    
+        myOutput << "<写语句>" << endl;
+    }
+    //返回语句
+    void returnSentence() {
+        consume("RETURNTK");
+        if (peek() == "LPARENT") {
+            consume("LPARENT");
+            expression();
+            consume("RPARENT");
+
+        }
+        
+        myOutput << "<返回语句>" << endl;
+    }
+
+
+
+
+};
+//
+//
+//
+//
+//int main() {
+//  
+//    ifstream myInput("input.txt");
+//    string line;
+//    vector<string> tokens;
+//  
+//
+//
+//    while (getline(myInput, line)) {
+//        //std::cout << line.substr(0,line.find(" ")) << std::endl;
+//        tokens.push_back(line);
+//    }
+//
+//    
+//    Parser* p = new Parser(tokens);
+//    p->procedure();
+//    //p->printSentence();
+//
+//
+//    return 0;
+//}
+
+
+#include <iostream>
+#include  <string.h>
+#define lengthOfRwtab 13
+#define lengthOfToken 32
+#define lengthOfProg 8000
+using namespace std;
+
+char prog[lengthOfProg], token[lengthOfToken];
+char ch;
+int  p, m, n, sum;
+const char* rwtab[lengthOfRwtab] = { "const","int","char","void","main","if","else","do","while","for","scanf","printf","return" };
+enum Type {
+	IDENFR, INTCON, CHARCON, STRCON, CONSTTK,
+	INTTK, CHARTK, VOIDTK, MAINTK, IFTK, ELSETK, DOTK
+	, WHILETK, FORTK, SCANFTK, PRINTFTK, RETURNTK, PLUS, MINU, MULT
+	, DIV, LSS, LEQ, GRE, GEQ, EQL, NEQ, ASSIGN, SEMICN, COMMA, LPARENT, RPARENT, LBRACK, RBRACK, LBRACE, RBRACE, END, WRONG
+}syn;
+string StrType[] = { "IDENFR" , "INTCON", "CHARCON", "STRCON","CONSTTK",
+	"INTTK", "CHARTK", "VOIDTK", "MAINTK", "IFTK","ELSETK","DOTK"
+	,"WHILETK", "FORTK","SCANFTK", "PRINTFTK", "RETURNTK", "PLUS", "MINU", "MULT"
+	, "DIV", "LSS","LEQ", "GRE","GEQ","EQL","NEQ","ASSIGN","SEMICN","COMMA","LPARENT","RPARENT","LBRACK","RBRACK","LBRACE","RBRACE", "END","WRONG" };
+
+void scaner();
+int main()
+{
+	p = 0;
+	FILE* file;
+	char filename[] = "testfile.txt";
+	file = fopen(filename, "r");
+	if (file == NULL) {
+		cout << "FILE WRONG" << endl;
+	}
+	else {
+		fread(prog, sizeof(char), lengthOfProg - 1, file);
+	}
+
+
+	p = 0;
+
+	FILE* fileOutput;
+	char filenameOutput[] = "test.txt";
+	fileOutput = fopen(filenameOutput, "w");
+	if (fileOutput == NULL) {
+		cout << "FILE OUTPUT WRONG" << endl;
+	}
+	else {
+
+		do
+		{
+			scaner();
+
+			switch (syn)
+			{
+
+
+			case INTCON:
+				fprintf(fileOutput, "%s %d\n", StrType[syn].c_str(), sum);
+
+				break;
+
+			case WRONG:
+
+			case END:
+				break;
+			default:
+				fprintf(fileOutput, "%s %s\n", StrType[syn].c_str(), token);
+
+
+
+			}
+		} while (syn != END);
+	}
+    fclose(fileOutput);
+
+
+
+        ifstream myInput("test.txt");
+        string line;
+        vector<string> tokens;
+      
+    
+    
+        while (getline(myInput, line)) {
+            tokens.push_back(line);
+        }
+    
+        
+        Parser* p = new Parser(tokens);
+        p->procedure();
+
+    
+    
+        return 0;
+
+
+
+}
+
+void scaner()
+{
+
+	for (n = 0; n < lengthOfToken; n++) token[n] = '\0';
+
+	m = 0;
+	ch = prog[p++];
+
+	while (ch == ' ' || ch == '\n' || ch == '\t') ch = prog[p++];
+
+	if ((ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || (ch == '_'))
+	{
+
+		while ((ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9') || (ch == '_'))
+		{
+			token[m++] = ch;
+			ch = prog[p++];
+
+		}
+		token[m++] = '\0';
+
+		p--;
+
+		syn = IDENFR;
+		for (n = 0; n < lengthOfRwtab; n++)
+			if (strcmp(token, rwtab[n]) == 0)
+			{
+
+				syn = static_cast<Type>(n + 4);
+				break;
+
+			}
+	}
+	else if (ch == '\'') {
+
+		ch = prog[p++];
+
+		token[m++] = ch;
+		ch = prog[p++];
+		if (ch != '\'') {
+			syn = WRONG;
+			p--;
+		}
+		else {
+			syn = CHARCON;
+			token[m++] = '\0';
+		}
+
+
+	}
+	else if (ch == '\"') {
+		ch = prog[p++];
+		while (ch == 32 || ch == 33 || (ch > 35 && ch < 126)) {
+			token[m++] = ch;
+			ch = prog[p++];
+		}
+		if (ch != '\"') {
+			syn = WRONG;
+			p--;
+		}
+		else {
+			syn = STRCON;
+			token[m++] = '\0';
+		}
+	}
+
+
+	else if (ch >= '0' && ch <= '9')
+	{
+		sum = 0;
+		while (ch >= '0' && ch <= '9')
+		{
+			sum = sum * 10 + ch - '0';
+			ch = prog[p++];
+		}
+		p--;
+		syn = INTCON;
+	}
+	else
+		switch (ch)
+		{
+		case'<': token[m++] = ch;
+
+			ch = prog[p++];
+			if (ch == '=') { syn = LEQ; token[m++] = ch; }
+			else { syn = LSS; p--; }
+			break;
+		case'>': token[m++] = ch;
+			ch = prog[p++];
+			if (ch == '=') { syn = GEQ; token[m++] = ch; }
+			else { syn = GRE; p--; }
+			break;
+		case'=':token[m++] = ch;
+			ch = prog[p++];
+			if (ch == '=') { syn = EQL; token[m++] = ch; }
+			else { syn = ASSIGN; p--; }
+			break;
+		case'!':token[m++] = ch;
+			ch = prog[p++];
+			if (ch == '=') { syn = NEQ; token[m++] = ch; }
+			else { syn = WRONG; p--; }
+			break;
+		case'+': syn = PLUS; token[0] = ch; break;
+		case'-': syn = MINU; token[0] = ch; break;
+		case'*': syn = MULT; token[0] = ch; break;
+		case'/': syn = DIV; token[0] = ch; break;
+		case',': syn = COMMA; token[0] = ch; break;
+		case';': syn = SEMICN; token[0] = ch; break;
+		case'(': syn = LPARENT; token[0] = ch; break;
+		case')': syn = RPARENT; token[0] = ch; break;
+		case'[': syn = LBRACK; token[0] = ch; break;
+		case']': syn = RBRACK; token[0] = ch; break;
+		case'{': syn = LBRACE; token[0] = ch; break;
+		case'}': syn = RBRACE; token[0] = ch; break;
+		case 0: syn = END; token[0] = ch; break;
+
+		default:syn = WRONG;
+		}
+}
+
+
+
+//#include <iostream>
+//#include<fstream>
+//#include<string>
+//using namespace std;
+//int main() {
+//	string line;
+//	string temp;
+//	ifstream input("b.txt");
+//	ofstream output("c.txt");
+//	while (getline(input, line) ){
+//		temp = line.substr(line.find("	")+1) ;
+//		if (temp[0] != '<') {
+//			output << temp << endl;
+//		}
+//
+//	}
+//
+//
+//}
