@@ -1,0 +1,194 @@
+#include <iostream>
+#include  <string.h>
+#define lengthOfRwtab 13
+#define lengthOfToken 32
+#define lengthOfProg 8000
+using namespace std;
+
+char prog[lengthOfProg], token[lengthOfToken];
+char ch;
+int  p, m, n, sum;
+const char* rwtab[lengthOfRwtab] = { "const","int","char","void","main","if","else","do","while","for","scanf","printf","return"};
+enum Type{ IDENFR , INTCON, CHARCON, STRCON,CONSTTK,
+	INTTK, CHARTK, VOIDTK, MAINTK, IFTK,ELSETK,DOTK
+	,WHILETK, FORTK,SCANFTK, PRINTFTK, RETURNTK, PLUS, MINU, MULT
+	, DIV, LSS,LEQ, GRE,GEQ,EQL,NEQ,ASSIGN,SEMICN,COMMA,LPARENT,RPARENT,LBRACK,RBRACK,LBRACE,RBRACE, END, WRONG
+}syn;
+string StrType[] = { "IDENFR" , "INTCON", "CHARCON", "STRCON","CONSTTK",
+	"INTTK", "CHARTK", "VOIDTK", "MAINTK", "IFTK","ELSETK","DOTK"
+	,"WHILETK", "FORTK","SCANFTK", "PRINTFTK", "RETURNTK", "PLUS", "MINU", "MULT"
+	, "DIV", "LSS","LEQ", "GRE","GEQ","EQL","NEQ","ASSIGN","SEMICN","COMMA","LPARENT","RPARENT","LBRACK","RBRACK","LBRACE","RBRACE", "END","WRONG" };
+
+void scaner();
+int main()
+{
+	p = 0;
+	FILE* file;
+	char filename[] = "testfile.txt";
+	file = fopen(filename, "r");
+	if (file == NULL) {
+		cout << "FILE WRONG" << endl;
+	}
+	else {
+		fread(prog, sizeof(char), lengthOfProg-1, file);
+	}
+
+
+	p = 0;
+
+	FILE* fileOutput;
+	char filenameOutput[] = "output.txt";
+	fileOutput = fopen(filenameOutput, "w");
+	if (fileOutput == NULL) {
+		cout << "FILE OUTPUT WRONG" << endl;
+	}
+	else {
+
+		do
+		{
+			scaner();
+			
+			switch (syn)
+			{
+
+		
+			case INTCON:
+				fprintf(fileOutput, "%s %d\n", StrType[syn].c_str(), sum);
+	
+				break;
+	
+			case WRONG:
+		
+			case END:
+				break;
+			default:
+				fprintf(fileOutput,"%s %s\n", StrType[syn].c_str(), token);
+			
+
+
+			}
+		} while (syn != END); 
+	}
+}
+ 
+void scaner ()
+{
+	
+	for (n = 0; n < lengthOfToken; n++) token[n] ='\0';
+
+	m = 0;
+	ch = prog[p++];
+
+	while (ch == ' '|| ch == '\n'|| ch == '\t') ch = prog[p++];
+
+	if ((ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z')||(ch=='_'))
+	{
+		
+		while ((ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9') || (ch == '_'))
+		{
+			token[m++] = ch;
+			ch = prog[p++];
+		
+		}
+		token[m++] = '\0'; 
+
+		p--;  
+
+		syn = IDENFR;
+		for (n = 0; n < lengthOfRwtab; n++)
+			if (strcmp(token, rwtab[n]) == 0) 
+			{
+			
+				syn = static_cast<Type>(n + 4);
+				break;
+
+			}
+	}
+	else if (ch == '\'') {
+		
+		ch = prog[p++];
+		
+		token[m++] = ch;
+		ch = prog[p++];
+		if (ch != '\'') {
+			syn = WRONG;
+			p--;
+		}
+		else {
+			syn = CHARCON;
+			token[m++] = '\0';
+		}
+	
+
+	}
+	else if (ch == '\"') {
+		ch = prog[p++];
+		while (ch == 32 || ch == 33 || (ch > 35 && ch < 126)) {
+			token[m++] = ch;
+			ch = prog[p++];
+		}
+		if (ch != '\"') {
+			syn = WRONG;
+			p--;
+		}
+		else {
+			syn = STRCON;
+			token[m++] = '\0';
+		}
+	}
+
+
+	else if (ch >= '0' && ch <= '9') 
+	{
+		sum = 0; 
+		while (ch >= '0' && ch <= '9')
+		{
+			sum = sum * 10 + ch - '0';  
+			ch = prog[p++];
+		}
+		p--; 
+		syn = INTCON;
+	}
+	else
+		switch (ch)
+		{
+		case'<': token[m++] = ch;
+
+			ch = prog[p++];
+			if (ch == '=') { syn = LEQ; token[m++] = ch; }
+			else { syn = LSS; p--; }
+			break;
+		case'>': token[m++] = ch;
+			ch = prog[p++];
+			if (ch == '=') { syn = GEQ; token[m++] = ch; }
+			else { syn = GRE; p--; }
+			break;
+		case'=':token[m++] = ch;
+			ch = prog[p++];
+			if (ch == '=') { syn = EQL; token[m++] = ch; }
+			else { syn = ASSIGN; p--; }
+			break;
+		case'!':token[m++] = ch;
+			ch = prog[p++];
+			if (ch == '=') { syn = NEQ; token[m++] = ch; }
+			else { syn = WRONG; p--; }
+			break;
+		case'+': syn = PLUS; token[0] = ch; break;
+		case'-': syn = MINU; token[0] = ch; break;
+		case'*': syn = MULT; token[0] = ch; break;
+		case'/': syn = DIV; token[0] = ch; break;
+		case',': syn = COMMA; token[0] = ch; break;
+		case';': syn = SEMICN; token[0] = ch; break;
+		case'(': syn = LPARENT; token[0] = ch; break;
+		case')': syn = RPARENT; token[0] = ch; break;
+		case'[': syn = LBRACK; token[0] = ch; break;
+		case']': syn = RBRACK; token[0] = ch; break;
+		case'{': syn = LBRACE; token[0] = ch; break;
+		case'}': syn = RBRACE; token[0] = ch; break;
+		case 0: syn = END; token[0] = ch; break;
+
+		default:syn = WRONG;
+		}
+}
+
+
